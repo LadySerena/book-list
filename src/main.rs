@@ -1,5 +1,5 @@
 use postgres::{Client, NoTls};
-use serde::{Deserialize, Serialize};
+
 
 mod log;
 
@@ -38,9 +38,19 @@ fn populate_database() -> Result<u64, postgres::Error> {
 fn main() {
     let attributes = log::LogAttributes::new().unwrap();
 
-    let logger = log::Logger::new(attributes);
+    let mut logger = log::Logger::new(attributes);
 
-    logger.write("hello world");
+    logger.trace("hello world");
+
+    logger.debug("hello world");
+
+    logger.info("hello world");
+
+    logger.warn("hello world");
+
+    logger.error("hello world");
+
+    logger.fatal("hello world");
 
 
     create_database("serena_test").unwrap();
