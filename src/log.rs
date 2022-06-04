@@ -1,5 +1,4 @@
 use std::{fmt, io};
-
 use std::fmt::Formatter;
 use std::fs::File;
 use std::io::Read;
@@ -7,7 +6,7 @@ use std::net::{IpAddr, TcpStream};
 use std::time::SystemTime;
 
 use chrono::Utc;
-use serde::{Serialize};
+use serde::Serialize;
 use serde_json::map::Map;
 
 #[derive(Clone)]
@@ -59,6 +58,7 @@ struct Message {
     timestamp: u64,
     severity_text: String,
     severity_number: u8,
+    resource: Map<String, serde_json::Value>,
 
 }
 
