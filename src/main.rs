@@ -9,21 +9,12 @@ mod middleware;
 async fn main() -> tide::Result<()> {
     let attributes = log::LogAttributes::new().unwrap();
 
-    let mut logger = log::Logger::new(attributes);
+    let logger = log::Logger::new(attributes);
 
-    logger.trace("hello world");
-
-    logger.debug("hello world");
-
-    logger.info("hello world");
-
-    logger.warn("hello world");
-
-    logger.error("hello world");
-
-    logger.fatal("hello world");
+    let telemetry_middleware = middleware::TelemetryMiddleware::new(logger);
 
     let mut app = tide::new();
+    app.with(telemetry_middleware);
     app.at("/livez").get(liveness);
     app.listen("0.0.0.0:8080").await?;
     Ok(())
