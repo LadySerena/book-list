@@ -3,11 +3,14 @@ use std::fmt::Formatter;
 use std::fs::File;
 use std::io::Read;
 use std::net::{IpAddr, TcpStream};
+use std::process::Command;
+use std::string::FromUtf8Error;
 use std::time::SystemTime;
 
 use chrono::Utc;
 use serde::Serialize;
 use serde_json::map::Map;
+use opentelemetry_semantic_conventions::resource::*;
 
 #[derive(Clone)]
 pub struct Logger {
@@ -105,8 +108,11 @@ impl Logger {
         let mut attributes = Map::new();
 
         attributes.insert("human_timestamp".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
-        attributes.insert("hostname".to_string(), serde_json::Value::String(self.attributes.hostname.clone()));
         attributes.insert("ipaddress".to_string(), serde_json::Value::String(self.attributes.ip_address.to_string()));
+
+        let mut resource = Map::new();
+
+        resource.insert(HOST_NAME.to_string(), serde_json::Value::String(self.attributes.hostname.clone()));
 
         let severity_number = LogLevel::severity_number(level);
 
@@ -116,6 +122,7 @@ impl Logger {
             timestamp: epoch,
             severity_text: level.to_string(),
             severity_number,
+            resource,
         };
 
         let serialized_message = serde_json::to_string(&m).unwrap();
@@ -135,12 +142,8 @@ pub struct LogAttributes {
 }
 
 impl LogAttributes {
-    pub(crate) fn new() -> Result<Self, io::Error> {
-        let hostname = if cfg!(target_os = "linux") {
-            get_hostname_linux()?
-        } else {
-            "unknown".to_string()
-        };
+    pub(crate) fn new() -> Result<Self,Box<dyn std::error::Error>> {
+        let hostname = get_hostname()?;
 
         let ip_address = get_ipv4_address()?;
 
@@ -152,13 +155,20 @@ impl LogAttributes {
 }
 
 #[cfg(target_os = "linux")]
-fn get_hostname_linux() -> io::Result<String> {
+fn get_hostname() -> io::Result<String> {
     let mut file = File::open("/proc/sys/kernel/hostname")?;
     let mut s = String::new();
     match file.read_to_string(&mut s) {
         Ok(_) => Ok(s.trim().to_string()),
         Err(e) => Err(e),
     }
+}
+#[cfg(not(os = "linux"))]
+#[cfg(target_family = "unix")]
+fn get_hostname() -> Result<String, FromUtf8Error> {
+    let mut input = Command::new("hostname");
+    let output = input.output().expect("could not get output from running `hostname`");
+    Ok(String::from_utf8(output.stdout).expect("invalid characters from stdout running `hostname`").trim().to_string())
 }
 
 
