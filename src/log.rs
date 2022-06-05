@@ -61,7 +61,7 @@ struct Message {
     timestamp: u64,
     severity_text: String,
     severity_number: u8,
-    // resource: Map<String, serde_json::Value>,
+    resource: Map<String, serde_json::Value>,
 
 }
 
