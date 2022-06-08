@@ -1,13 +1,16 @@
 use std::sync::Arc;
+
 use opentelemetry::{global, Key};
 use opentelemetry::metrics::Counter;
 use opentelemetry_prometheus::PrometheusExporter;
 use prometheus::{Encoder, TextEncoder};
 use tide::{Body, Middleware, Next, Request, Response, StatusCode};
+
 use crate::log::Logger;
 
 const METRICS_ROUTE: &str = "/metrics";
 const ROUTE_KEY: Key = Key::from_static_str("http_route");
+const STATUS_KEY: Key = Key::from_static_str("status_code");
 
 pub struct TelemetryMiddleware {
     logger: Logger,
@@ -32,7 +35,7 @@ impl TelemetryMiddleware {
             logger,
             exporter,
             request_count,
-            encoder
+            encoder,
         }
     }
 }
@@ -51,12 +54,19 @@ impl<State: Clone + Send + Sync + 'static> Middleware<State> for TelemetryMiddle
         } else {
             let mut logger = self.logger.clone();
             logger.trace("request received");
-            let labels = vec![ROUTE_KEY.string(request.url().path().to_string())];
-            self.request_count.add(1, &labels);
+
+            let url = request.url().clone();
+
             let res = next.run(request).await;
+
+            let labels = vec![
+                ROUTE_KEY.string(url.path().to_string()),
+                STATUS_KEY.i64(res.status() as i64),
+            ];
+
+            self.request_count.add(1, &labels);
+
             Ok(res)
         }
-
-
     }
 }
