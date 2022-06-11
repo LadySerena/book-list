@@ -3,7 +3,11 @@ use std::fmt::Formatter;
 use std::fs::File;
 use std::io::Read;
 use std::net::{IpAddr, TcpStream};
+#[cfg(all(target_family = "unix"))]
+#[cfg(not(target_os = "linux"))]
 use std::process::Command;
+#[cfg(all(target_family = "unix"))]
+#[cfg(not(target_os = "linux"))]
 use std::string::FromUtf8Error;
 use std::time::SystemTime;
 
@@ -72,32 +76,31 @@ impl Logger {
         }
     }
 
-    pub fn trace(&mut self, body: &str) {
+    pub fn trace(&self, body: &str) {
         self.write(body.to_string(), LogLevel::Trace)
     }
 
-    pub fn debug(&mut self, body: &str) {
+    pub fn debug(&self, body: &str) {
         self.write(body.to_string(), LogLevel::Debug)
     }
 
-
-    pub fn info(&mut self, body: &str) {
+    pub fn info(&self, body: &str) {
         self.write(body.to_string(), LogLevel::Info)
     }
 
-    pub fn warn(&mut self, body: &str) {
+    pub fn warn(&self, body: &str) {
         self.write(body.to_string(), LogLevel::Warn)
     }
 
-    pub fn error(&mut self, body: &str) {
+    pub fn error(&self, body: &str) {
         self.write(body.to_string(), LogLevel::Error)
     }
 
-    pub fn fatal(&mut self, body: &str) {
+    pub fn fatal(&self, body: &str) {
         self.write(body.to_string(), LogLevel::Fatal)
     }
 
-    fn write(&mut self, body: String, level: LogLevel) {
+    fn write(&self, body: String, level: LogLevel) {
         let now = SystemTime::now();
 
         let epoch = match now.duration_since(SystemTime::UNIX_EPOCH) {
@@ -163,8 +166,8 @@ fn get_hostname() -> io::Result<String> {
         Err(e) => Err(e),
     }
 }
-#[cfg(not(os = "linux"))]
-#[cfg(target_family = "unix")]
+#[cfg(all(target_family = "unix"))]
+#[cfg(not(target_os = "linux"))]
 fn get_hostname() -> Result<String, FromUtf8Error> {
     let mut input = Command::new("hostname");
     let output = input.output().expect("could not get output from running `hostname`");

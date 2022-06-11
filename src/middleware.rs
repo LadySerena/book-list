@@ -13,7 +13,7 @@ const ROUTE_KEY: Key = Key::from_static_str("http_route");
 const STATUS_KEY: Key = Key::from_static_str("status_code");
 
 pub struct TelemetryMiddleware {
-    logger: Logger,
+    logger_ref: Arc<Logger>,
     exporter: PrometheusExporter,
     request_count: Counter<u64>,
     encoder: TextEncoder,
@@ -30,9 +30,9 @@ impl TelemetryMiddleware {
             .init();
 
         let encoder = TextEncoder::new();
-
+        let logger_ref = Arc::new(logger.clone());
         Self {
-            logger,
+            logger_ref,
             exporter,
             request_count,
             encoder,
@@ -52,8 +52,7 @@ impl<State: Clone + Send + Sync + 'static> Middleware<State> for TelemetryMiddle
             res.set_body(Body::from_bytes(result));
             Ok(res)
         } else {
-            let mut logger = self.logger.clone();
-            logger.trace("request received");
+            self.logger_ref.trace("request received");
 
             let url = request.url().clone();
 
