@@ -7,4 +7,11 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: foobar1234
-      POSTGRES_DB: serena_test
+      POSTGRES_DB: booklist-db
+  backend:
+    build: .
+    container_name: booklist
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./local-config.yaml:/config/database.yaml

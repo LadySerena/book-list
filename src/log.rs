@@ -1,4 +1,3 @@
-use std::{fmt, io};
 use std::fmt::Formatter;
 use std::fs::File;
 use std::io::Read;
@@ -10,11 +9,12 @@ use std::process::Command;
 #[cfg(not(target_os = "linux"))]
 use std::string::FromUtf8Error;
 use std::time::SystemTime;
+use std::{fmt, io};
 
 use chrono::Utc;
+use opentelemetry_semantic_conventions::resource::*;
 use serde::Serialize;
 use serde_json::map::Map;
-use opentelemetry_semantic_conventions::resource::*;
 
 #[derive(Clone)]
 pub struct Logger {
@@ -66,14 +66,11 @@ struct Message {
     severity_text: String,
     severity_number: u8,
     resource: Map<String, serde_json::Value>,
-
 }
 
 impl Logger {
     pub fn new(attributes: LogAttributes) -> Self {
-        Logger {
-            attributes,
-        }
+        Logger { attributes }
     }
 
     pub fn trace(&self, body: &str) {
@@ -110,12 +107,21 @@ impl Logger {
 
         let mut attributes = Map::new();
 
-        attributes.insert("human_timestamp".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
-        attributes.insert("ipaddress".to_string(), serde_json::Value::String(self.attributes.ip_address.to_string()));
+        attributes.insert(
+            "human_timestamp".to_string(),
+            serde_json::Value::String(Utc::now().to_rfc3339()),
+        );
+        attributes.insert(
+            "ipaddress".to_string(),
+            serde_json::Value::String(self.attributes.ip_address.to_string()),
+        );
 
         let mut resource = Map::new();
 
-        resource.insert(HOST_NAME.to_string(), serde_json::Value::String(self.attributes.hostname.clone()));
+        resource.insert(
+            HOST_NAME.to_string(),
+            serde_json::Value::String(self.attributes.hostname.clone()),
+        );
 
         let severity_number = LogLevel::severity_number(level);
 
@@ -145,7 +151,7 @@ pub struct LogAttributes {
 }
 
 impl LogAttributes {
-    pub(crate) fn new() -> Result<Self,Box<dyn std::error::Error>> {
+    pub(crate) fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let hostname = get_hostname()?;
 
         let ip_address = get_ipv4_address()?;
@@ -170,10 +176,14 @@ fn get_hostname() -> io::Result<String> {
 #[cfg(not(target_os = "linux"))]
 fn get_hostname() -> Result<String, FromUtf8Error> {
     let mut input = Command::new("hostname");
-    let output = input.output().expect("could not get output from running `hostname`");
-    Ok(String::from_utf8(output.stdout).expect("invalid characters from stdout running `hostname`").trim().to_string())
+    let output = input
+        .output()
+        .expect("could not get output from running `hostname`");
+    Ok(String::from_utf8(output.stdout)
+        .expect("invalid characters from stdout running `hostname`")
+        .trim()
+        .to_string())
 }
-
 
 fn get_ipv4_address() -> io::Result<IpAddr> {
     let stream = TcpStream::connect("8.8.8.8:443")?;
