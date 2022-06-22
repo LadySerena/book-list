@@ -63,6 +63,12 @@ impl<State: Clone + Send + Sync + 'static> Middleware<State> for TelemetryMiddle
                 STATUS_KEY.i64(res.status() as i64),
             ];
 
+            // todo create wrapper error for easier handling
+            if let Some(err) = res.downcast_error::<postgres::error::Error>() {
+                let msg = format!("Error: {:?}", err);
+                self.logger_ref.debug(msg.as_str());
+            }
+
             self.request_count.add(1, &labels);
 
             Ok(res)
